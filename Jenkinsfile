@@ -3,7 +3,7 @@ pipeline {
     agent any
 
     environment {
-        CHARTMUSEUM_CREDS = credentials('chartmuseum-credentials')
+        CHARTMUSEUM_CREDS = credentials('Jenkins-github-pat')
         CHARTMUSEUM_URL   = 'http://192.168.122.154'
         CHART_DIR         = 'charts/my-web-app'
     }
