@@ -24,7 +24,6 @@ pipeline {
             agent {
               dockerContainer {
                 image 'alpine/helm:latest'
-                reuseNode same
               }
             }
             steps {
@@ -37,7 +36,6 @@ pipeline {
 	  agent {
 	    dockerContainer {
 	      image 'aquasec/trivy:latest'
-	      reuseNode true
 	    }
 	  }
 	  steps {
