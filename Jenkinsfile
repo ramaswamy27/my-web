@@ -21,11 +21,11 @@ pipeline {
         }
 
         stage('Lint & Validate') {
-            agent {
-              dockerContainer {
-                image 'alpine/helm:latest'
-              }
-            }
+	    steps {
+		echo "Spawning isolated Helm container via host socket..."
+                // -v $(pwd):/apps mounts your checkout workspace into the container dynamically
+                sh "docker run --rm -v \$(pwd):/apps -w /apps alpine/helm:3.15.0 helm lint ${CHART_DIR}"
+	     }
             steps {
                 // This stage runs on BOTH Pull Requests and Main branch commits to catch structural errors
                 sh "helm lint ${CHART_DIR}"
@@ -33,10 +33,10 @@ pipeline {
         }
 
   	stage('Security Complaince Scan') {
-	  agent {
-	    dockerContainer {
-	      image 'aquasec/trivy:latest'
-	    }
+	  steps {
+	    echo "Spawning isolated Trivy container via host socket..."
+            // Runs security audits completely inside a sibling container
+            sh "docker run --rm -v \$(pwd):/apps -w /apps aquasec/trivy:latest config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1"
 	  }
 	  steps {
 	    echo "Scanning Helm configurations for misconfigurations and secrets"
