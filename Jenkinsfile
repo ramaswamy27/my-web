@@ -15,59 +15,61 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // Safely pulls down the code from GitHub
                 checkout scm
-            }
         }
+    }
 
         stage('Lint & Validate') {
-	    steps {
-		echo "Spawning isolated Helm container via host socket..."
-                // -v $(pwd):/apps mounts your checkout workspace into the container dynamically
-                sh "docker run --rm -v \$(pwd):/apps -w /apps alpine/helm:3.15.0 helm lint ${CHART_DIR}"
-	     }
+            agent {
+                dockerContainer { 
+                    image 'alpine/helm:3.15.0'
+                }
+            }
             steps {
-                // This stage runs on BOTH Pull Requests and Main branch commits to catch structural errors
                 sh "helm lint ${CHART_DIR}"
             }
         }
 
-  	stage('Security Complaince Scan') {
-	  steps {
-	    echo "Spawning isolated Trivy container via host socket..."
-            // Runs security audits completely inside a sibling container
-            sh "docker run --rm -v \$(pwd):/apps -w /apps aquasec/trivy:latest config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1"
-	  }
-	  steps {
-	    echo "Scanning Helm configurations for misconfigurations and secrets"
-	    sh "trivy config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1"
-	  }
+        stage('Security Compliance Scan') {
+            agent {
+                dockerContainer { 
+                    image 'aquasec/trivy:latest' 
+                }
+            }
+            steps {
+                echo "Scanning Helm configurations for misconfigurations and secrets..."
+                sh "trivy config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1"
+            }
         }
 
         stage('Package Chart') {
             when {
-                // DECOUPLING RULE: Only package the chart binary when changes hit the production branch
-                branch 'main'
+                branch 'main' 
+            }
+            agent {
+                dockerContainer { 
+                    image 'alpine/helm:3.15.0'
+                }
             }
             steps {
-                sh '''
-                    mkdir -p dist
-                    helm package ${CHART_DIR} --destination dist/
-                '''
+                sh "mkdir -p dist && helm package ${CHART_DIR} --destination dist/"
             }
         }
 
         stage('Publish to Chartmuseum') {
             when {
-                // DECOUPLING RULE: Only publish to your in-house registry after a PR is approved and merged into main
-                branch 'main'
+                branch 'main' 
+            }
+            agent {
+                dockerContainer { 
+                    image 'curlimages/curl:latest' 
+                }
             }
             steps {
                 sh '''
                     CHART_FILE=$(ls dist/*.tgz)
                     echo "Uploading production release ${CHART_FILE} to internal Chartmuseum..."
                     
-                    # POSTs the packaged binary directly to Chartmuseum's standard REST API
                     curl -u "${CHARTMUSEUM_CREDS_USR}:${CHARTMUSEUM_CREDS_PSW}" \
                          --data-binary "@${CHART_FILE}" \
                          "${CHARTMUSEUM_URL}/api/charts"
@@ -78,7 +80,6 @@ pipeline {
 
     post {
         always {
-            // Workspace Hygiene: Wipe local binary artifacts so they don't consume Jenkins worker storage
             cleanWs()
         }
     }
