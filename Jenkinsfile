@@ -27,7 +27,7 @@ pipeline {
             steps {
                 echo "Executing Trivy Scanning directly from local host Docker cache..."
                 // Runs Trivy from cache. Make sure you run 'docker pull aquasec/trivy:latest' on the host box too!
-                sh "docker run --rm -v \$(pwd):/apps -w /apps aquasec/trivy:latest config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1
+                sh "docker run --rm -v \$(pwd):/apps -w /apps aquasec/trivy:latest config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1"
             }
         }
 
