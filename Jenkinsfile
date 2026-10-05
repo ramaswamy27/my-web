@@ -22,7 +22,7 @@ pipeline {
         stage('Lint & Validate') {
             agent {
                 dockerContainer { 
-                    image 'alpine/helm:3.15.0'
+                    image 'alpine/helm:latest'
                 }
             }
             steps {
