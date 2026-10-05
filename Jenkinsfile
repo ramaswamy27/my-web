@@ -21,11 +21,29 @@ pipeline {
         }
 
         stage('Lint & Validate') {
+            agent {
+              docker {
+                image 'alpine/helm:latest'
+                reuseNode same
+              }
+            }
             steps {
                 // This stage runs on BOTH Pull Requests and Main branch commits to catch structural errors
                 sh "helm lint ${CHART_DIR}"
             }
         }
+
+  	stage('Security Complaince Scan') {
+	  agent {
+	    docker {
+	      image 'aquasec/trivy:latest'
+	      reuseNode true
+	    }
+	  }
+	  steps {
+	    echo "Scanning Helm configurations for misconfigurations and secrets"
+	    sh "trivy config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1"
+	  }
 
         stage('Package Chart') {
             when {
