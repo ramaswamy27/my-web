@@ -1,1 +1,2 @@
-# my-web
+# dev-helm-app
+Helm chart repository
