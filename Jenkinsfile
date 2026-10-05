@@ -19,7 +19,7 @@ pipeline {
             steps {
                 echo "Executing Helm Linting directly from local host Docker cache..."
                 // Runs standard docker run. Since you pulled alpine/helm:latest, it runs instantly.
-                sh "docker run --rm -v \$(pwd):/apps -w /apps alpine/helm:latest helm lint ${CHART_DIR}"
+                sh "docker run --rm -v \$(pwd):/apps -w /apps alpine/helm:latest lint ${CHART_DIR}"
             }
         }
 
@@ -27,7 +27,7 @@ pipeline {
             steps {
                 echo "Executing Trivy Scanning directly from local host Docker cache..."
                 // Runs Trivy from cache. Make sure you run 'docker pull aquasec/trivy:latest' on the host box too!
-                sh "docker run --rm -v \$(pwd):/apps -w /apps aquasec/trivy:latest config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1"
+                sh "docker run --rm -v \$(pwd):/apps -w /apps aquasec/trivy:latest config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1
             }
         }
 
@@ -37,7 +37,7 @@ pipeline {
             }
             steps {
                 sh "mkdir -p dist"
-                sh "docker run --rm -v \$(pwd):/apps -w /apps alpine/helm:latest helm package ${CHART_DIR} --destination dist/"
+                sh "docker run --rm -v \$(pwd):/apps -w /apps alpine/helm:latest package ${CHART_DIR} --destination dist/"
             }
         }
 
