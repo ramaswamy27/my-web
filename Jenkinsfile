@@ -1,76 +1,58 @@
 pipeline {
+    // Executes on the master node where you mounted the docker socket
     agent any
 
     environment {
-        // Points to the secure user/pass credential ID you created globally in Jenkins
-        CHARTMUSEUM_CREDS = credentials('Jenkins-github-pat')
-        
-        // Update this to your exact internal Chartmuseum endpoint URL
+        CHARTMUSEUM_CREDS = credentials('chartmuseum-credentials')
         CHARTMUSEUM_URL   = 'http://192.168.122.154'
-        
-        // The path to your Helm chart source subfolder
-        CHART_DIR         = 'charts/my-web' 
+        CHART_DIR         = 'charts/my-web-app'
     }
 
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
         }
-    }
 
         stage('Lint & Validate') {
-            agent {
-                dockerContainer { 
-                    image 'alpine/helm:latest'
-                }
-            }
             steps {
+                echo "Executing Helm Linting directly from local host Docker cache..."
+                // Runs standard docker run. Since you pulled alpine/helm:latest, it runs instantly.
                 sh "docker run --rm -v \$(pwd):/apps -w /apps alpine/helm:latest helm lint ${CHART_DIR}"
             }
         }
 
         stage('Security Compliance Scan') {
-            agent {
-                dockerContainer { 
-                    image 'aquasec/trivy:latest' 
-                }
-            }
             steps {
-                echo "Scanning Helm configurations for misconfigurations and secrets..."
-                sh "trivy config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1"
+                echo "Executing Trivy Scanning directly from local host Docker cache..."
+                // Runs Trivy from cache. Make sure you run 'docker pull aquasec/trivy:latest' on the host box too!
+                sh "docker run --rm -v \$(pwd):/apps -w /apps aquasec/trivy:latest config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1"
             }
         }
 
         stage('Package Chart') {
             when {
-                branch 'main' 
-            }
-            agent {
-                dockerContainer { 
-                    image 'alpine/helm:latest'
-                }
+                branch 'main'
             }
             steps {
-                sh "mkdir -p dist && helm package ${CHART_DIR} --destination dist/"
+                sh "mkdir -p dist"
+                sh "docker run --rm -v \$(pwd):/apps -w /apps alpine/helm:latest helm package ${CHART_DIR} --destination dist/"
             }
         }
 
         stage('Publish to Chartmuseum') {
             when {
-                branch 'main' 
-            }
-            agent {
-                dockerContainer { 
-                    image 'curlimages/curl:latest' 
-                }
+                branch 'main'
             }
             steps {
                 sh '''
                     CHART_FILE=$(ls dist/*.tgz)
                     echo "Uploading production release ${CHART_FILE} to internal Chartmuseum..."
                     
-                    curl -u "${CHARTMUSEUM_CREDS_USR}:${CHARTMUSEUM_CREDS_PSW}" \
+                    # Make sure you run 'docker pull curlimages/curl:latest' on your host box as well
+                    docker run --rm -v $(pwd):/apps -w /apps curlimages/curl:latest \
+                         -u "${CHARTMUSEUM_CREDS_USR}:${CHARTMUSEUM_CREDS_PSW}" \
                          --data-binary "@${CHART_FILE}" \
                          "${CHARTMUSEUM_URL}/api/charts"
                 '''
@@ -84,3 +66,4 @@ pipeline {
         }
     }
 }
+
