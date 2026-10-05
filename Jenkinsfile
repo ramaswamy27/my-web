@@ -44,6 +44,7 @@ pipeline {
 	    echo "Scanning Helm configurations for misconfigurations and secrets"
 	    sh "trivy config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1"
 	  }
+        }
 
         stage('Package Chart') {
             when {
