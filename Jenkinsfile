@@ -26,7 +26,7 @@ pipeline {
                 }
             }
             steps {
-                sh "helm lint ${CHART_DIR}"
+                sh "docker run --rm -v \$(pwd):/apps -w /apps alpine/helm:latest helm lint ${CHART_DIR}"
             }
         }
 
@@ -48,7 +48,7 @@ pipeline {
             }
             agent {
                 dockerContainer { 
-                    image 'alpine/helm:3.15.0'
+                    image 'alpine/helm:latest'
                 }
             }
             steps {
