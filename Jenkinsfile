@@ -22,7 +22,7 @@ pipeline {
 
         stage('Lint & Validate') {
             agent {
-              docker {
+              dockerContainer {
                 image 'alpine/helm:latest'
                 reuseNode same
               }
@@ -35,7 +35,7 @@ pipeline {
 
   	stage('Security Complaince Scan') {
 	  agent {
-	    docker {
+	    dockerContainer {
 	      image 'aquasec/trivy:latest'
 	      reuseNode true
 	    }
