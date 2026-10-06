@@ -6,6 +6,7 @@ pipeline {
         CHARTMUSEUM_CREDS = credentials('Jenkins-github-pat')
         CHARTMUSEUM_URL   = 'http://192.168.122.154'
         CHART_DIR         = 'charts/my-web'
+        WORKSPACE_DIR     = "my-web-helm-pipeline_${env.BRANCH_NAME}"
     }
 
     stages {
@@ -19,15 +20,15 @@ pipeline {
             steps {
                 echo "Executing Helm Linting directly from local host Docker cache..."
                 // Runs standard docker run. Since you pulled alpine/helm:latest, it runs instantly.
-                sh "docker run --rm -v \$(pwd):/apps -w /apps alpine/helm:latest lint ${CHART_DIR}"
+                sh "docker run --rm -v jenkins_home:/var/jenkins_home -w /var/jenkins_home/workspace/${WORKSPACE_DIR} alpine/helm:latest lint ${CHART_DIR}"
             }
         }
 
         stage('Security Compliance Scan') {
             steps {
-                echo "Executing Trivy Scanning directly from local host Docker cache..."
-                // Runs Trivy from cache. Make sure you run 'docker pull aquasec/trivy:latest' on the host box too!
-                sh "docker run --rm -v \$(pwd):/apps -w /apps aquasec/trivy:latest config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1"
+              echo "Executing Trivy Scanning directly from local host Docker cache..."
+              // Runs Trivy from cache. Make sure you run 'docker pull aquasec/trivy:latest' on the host box too!
+              sh "docker run --rm -v jenkins_home:/var/jenkins_home -w /var/jenkins_home/workspace/${WORKSPACE_DIR} aquasec/trivy:latest config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1"
             }
         }
 
@@ -37,7 +38,7 @@ pipeline {
             }
             steps {
                 sh "mkdir -p dist"
-                sh "docker run --rm -v \$(pwd):/apps -w /apps alpine/helm:latest package ${CHART_DIR} --destination dist/"
+                sh "docker run --rm -v jenkins_home:/var/jenkins_home -w /var/jenkins_home/workspace/${WORKSPACE_DIR} alpine/helm:latest package ${CHART_DIR} --destination dist/"
             }
         }
 
@@ -47,11 +48,10 @@ pipeline {
             }
             steps {
                 sh '''
-                    CHART_FILE=$(ls dist/*.tgz)
+		    CHART_FILE=$(ls dist/*.tgz)
                     echo "Uploading production release ${CHART_FILE} to internal Chartmuseum..."
                     
-                    # Make sure you run 'docker pull curlimages/curl:latest' on your host box as well
-                    docker run --rm -v $(pwd):/apps -w /apps curlimages/curl:latest \
+                    docker run --rm -v jenkins_home:/var/jenkins_home -w /var/jenkins_home/workspace/'${WORKSPACE_DIR}' curlimages/curl:latest \
                          -u "${CHARTMUSEUM_CREDS_USR}:${CHARTMUSEUM_CREDS_PSW}" \
                          --data-binary "@${CHART_FILE}" \
                          "${CHARTMUSEUM_URL}/api/charts"
