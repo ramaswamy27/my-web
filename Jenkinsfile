@@ -30,7 +30,8 @@ pipeline {
         stage('Security Compliance Scan') {
             steps {
                 echo "Executing Trivy Scanning inside active directory: ${REAL_WORKSPACE}"
-                sh "docker run --rm -v jenkins_home:/var/jenkins_home -w ${REAL_WORKSPACE} aquasec/trivy:latest config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1"
+                sh "docker run --rm -v jenkins_home:/var/jenkins_home -w ${REAL_WORKSPACE} aquasec/trivy:latest config ${CHART_DIR} \ 
+                    --severity HIGH,CRITICAL --exit-code 1 --timeout 15m --offline-scan"
             }
         }
 
@@ -54,7 +55,7 @@ pipeline {
                     echo "Uploading production release ${CHART_FILE} to internal Chartmuseum..."
                     
                     docker run --rm -v jenkins_home:/var/jenkins_home -w ${REAL_WORKSPACE} curlimages/curl:latest \
-                         -u "${CHARTMUSEUM_CREDS_USR}:${CHARTMUSEUM_CREDS_PSW}" \
+                         -f -u "${CHARTMUSEUM_CREDS_USR}:${CHARTMUSEUM_CREDS_PSW}" \
                          --data-binary "@${CHART_FILE}" \
                          "${CHARTMUSEUM_URL}/api/charts"
                 '''
