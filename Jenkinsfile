@@ -12,14 +12,10 @@ pipeline {
     stages {
         stage('Checkout') {
 	  steps {
-            // FORCE CLEAN CLONE: Drops all local cache files automatically
-              checkout([
-                $class: 'GitSCM', 
-                branches: scm.branches, 
-                doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations, 
-                extensions: scm.extensions + [[$class: 'WipeWorkspace']], 
-                userRemoteConfigs: scm.userRemoteConfigs
-              ])
+	     // Wipe the old directory clean before git pulls any code
+                deleteDir() 
+                // Pull a 100% fresh clone from GitHub
+                checkout scm
             }
         }
 
