@@ -30,7 +30,7 @@ pipeline {
         stage('Security Compliance Scan') {
             steps {
                 echo "Executing Trivy Scanning inside active directory: ${REAL_WORKSPACE}"
-                sh "docker run --rm -v jenkins_home:/var/jenkins_home -w ${REAL_WORKSPACE} aquasec/trivy:latest config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1 --timeout 15m --skip-db-update"
+                sh "docker run --rm -v jenkins_home:/var/jenkins_home -w ${REAL_WORKSPACE} aquasec/trivy:latest config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1 --timeout 15m --skip-check-update"
             }
         }
 
