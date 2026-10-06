@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        CHARTMUSEUM_CREDS = credentials('chartmuseum-credentials')
-        CHARTMUSEUM_URL   = 'http://company.com'
+        CHARTMUSEUM_CREDS = credentials('Jenkins-github-pat')
+        CHARTMUSEUM_URL   = 'http://192.168.122.154'
         CHART_DIR         = 'charts/my-web' 
         
         // AUTOMATED FIX: Dynamically extracts whatever active directory Jenkins is currently using (e.g. includes the @6)
