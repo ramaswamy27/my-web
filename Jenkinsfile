@@ -11,8 +11,15 @@ pipeline {
 
     stages {
         stage('Checkout') {
-            steps {
-                checkout scm
+	  steps {
+            // FORCE CLEAN CLONE: Drops all local cache files automatically
+              checkout([
+                $class: 'GitSCM', 
+                branches: scm.branches, 
+                doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations, 
+                extensions: scm.extensions + [[$class: 'WipeWorkspace']], 
+                userRemoteConfigs: scm.userRemoteConfigs
+              ])
             }
         }
 
