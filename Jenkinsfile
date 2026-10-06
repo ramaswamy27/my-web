@@ -2,47 +2,49 @@ pipeline {
     agent any
 
     environment {
-        // Points to the secure user/pass credential ID you created globally in Jenkins
         CHARTMUSEUM_CREDS = credentials('Jenkins-github-pat')
-        
-        // Update this to your exact internal Chartmuseum endpoint URL
         CHARTMUSEUM_URL   = 'http://192.168.122.154'
-        
-        // The path to your Helm chart source subfolder
         CHART_DIR         = 'charts/my-web' 
+        
+        // AUTOMATED FIX: Dynamically extracts whatever active directory Jenkins is currently using (e.g. includes the @6)
+        REAL_WORKSPACE    = "${env.WORKSPACE}"
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Safely pulls down the code from GitHub
+                deleteDir()
                 checkout scm
             }
         }
 
         stage('Lint & Validate') {
             steps {
-                // This stage runs on BOTH Pull Requests and Main branch commits to catch structural errors
-                sh "helm lint ${CHART_DIR}"
+                echo "Executing Helm Linting inside active directory: ${REAL_WORKSPACE}"
+                // FIXED: Mounts the volume and directs the working directory directly to the active path
+                sh "docker run --rm -v jenkins_home:/var/jenkins_home -w ${REAL_WORKSPACE} alpine/helm:latest lint ${CHART_DIR}"
+            }
+        }
+
+        stage('Security Compliance Scan') {
+            steps {
+                echo "Executing Trivy Scanning inside active directory: ${REAL_WORKSPACE}"
+                sh "docker run --rm -v jenkins_home:/var/jenkins_home -w ${REAL_WORKSPACE} aquasec/trivy:latest config ${CHART_DIR} --severity HIGH,CRITICAL --exit-code 1"
             }
         }
 
         stage('Package Chart') {
             when {
-                // DECOUPLING RULE: Only package the chart binary when changes hit the production branch
                 branch 'main'
             }
             steps {
-                sh '''
-                    mkdir -p dist
-                    helm package ${CHART_DIR} --destination dist/
-                '''
+                sh "mkdir -p dist"
+                sh "docker run --rm -v jenkins_home:/var/jenkins_home -w ${REAL_WORKSPACE} alpine/helm:latest package ${CHART_DIR} --destination dist/"
             }
         }
 
         stage('Publish to Chartmuseum') {
             when {
-                // DECOUPLING RULE: Only publish to your in-house registry after a PR is approved and merged into main
                 branch 'main'
             }
             steps {
@@ -50,8 +52,8 @@ pipeline {
                     CHART_FILE=$(ls dist/*.tgz)
                     echo "Uploading production release ${CHART_FILE} to internal Chartmuseum..."
                     
-                    # POSTs the packaged binary directly to Chartmuseum's standard REST API
-                    curl -u "${CHARTMUSEUM_CREDS_USR}:${CHARTMUSEUM_CREDS_PSW}" \
+                    docker run --rm -v jenkins_home:/var/jenkins_home -w ${REAL_WORKSPACE} curlimages/curl:latest \
+                         -u "${CHARTMUSEUM_CREDS_USR}:${CHARTMUSEUM_CREDS_PSW}" \
                          --data-binary "@${CHART_FILE}" \
                          "${CHARTMUSEUM_URL}/api/charts"
                 '''
@@ -61,8 +63,8 @@ pipeline {
 
     post {
         always {
-            // Workspace Hygiene: Wipe local binary artifacts so they don't consume Jenkins worker storage
             cleanWs()
         }
     }
 }
+
