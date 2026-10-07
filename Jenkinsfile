@@ -62,6 +62,7 @@ pipeline {
     post {
       always {
         cleanWs()
+        githubNotify context: 'continuous-integration/jenkins/pr-merge', status: currentBuild.currentResult
       }
     }
 }
