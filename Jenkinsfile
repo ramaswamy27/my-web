@@ -64,10 +64,10 @@ pipeline {
         cleanWs()
       }
       success {
-        setGitHubPullRequestStatus(context: 'continuous-integration/jenkins/pr-merge', message: 'Jenkins Build Passed Successfully!', state: 'SUCCESS')
+        updateGitCommitStatus(name: 'continuous-integration/jenkins/pr-merge', status: 'SUCCESS')
       }
       failure {
-        setGitHubPullRequestStatus(context: 'continuous-integration/jenkins/pr-merge', message: 'Jenkins Build Failed!', state: 'FAILURE')
+        updateGitCommitStatus(name: 'continuous-integration/jenkins/pr-merge', status: 'FAILURE')
       }
     }
 }
