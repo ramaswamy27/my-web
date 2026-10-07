@@ -63,12 +63,6 @@ pipeline {
       always {
         cleanWs()
       }
-      success {
-        updateGitCommitStatus(name: 'continuous-integration/jenkins/pr-merge', status: 'SUCCESS')
-      }
-      failure {
-        updateGitCommitStatus(name: 'continuous-integration/jenkins/pr-merge', status: 'FAILURE')
-      }
     }
 }
 
